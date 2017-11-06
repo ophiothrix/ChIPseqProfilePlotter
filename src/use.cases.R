@@ -33,7 +33,7 @@ is.PE = T
 ## genome - only required when target region is specified as gene symbol
 
 ## Calculate and plot the coverage
-pdf("./graphs/use.case.1.pdf", 8, 6)
+png("./graphs/use.case.1.png", 800, 600)
 plot.coverage.profile(target = target.range, bams = path.to.bams, lib.size = library.sizes, is.PE = is.PE, flank.region = flank.region, fragment.size = frag.size)
 dev.off()
 
@@ -62,7 +62,7 @@ is.PE = T
 genome <- "mm10"
 
 ## Calculate and plot the coverage
-pdf("./graphs/use.case.2.pdf", 8, 6)
+png("./graphs/use.case.2.png", 800, 600)
 plot.coverage.profile(target = target.gene, bams = path.to.bams, lib.size = library.sizes, is.PE = is.PE, genome = genome)
 dev.off()
 
@@ -97,6 +97,6 @@ library.sizes <- c(15489132, 14496836, 23424741, 20148416)
 is.PE = T
 
 ## Calculate and plot the coverage
-pdf("./graphs/use.case.3.pdf", 8, 6)
+png("./graphs/use.case.3.png", 800, 600)
 plot.tss.coverage.profile(target.ranges = tss.anno, bams = path.to.bams, flank.region = flank.region, lib.size = library.sizes, is.PE = is.PE)
 dev.off()
