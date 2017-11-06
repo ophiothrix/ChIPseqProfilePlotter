@@ -1,6 +1,6 @@
 # rm(list = ls())
 # gc()
-
+require(GenomicRanges)
 #### Use case 1 ####
 ### Plot coverage from a set of bam files over given genomic range ###
 source("./lib/plot.coverage.profile.R")
@@ -32,9 +32,15 @@ is.PE = T
 
 ## genome - only required when target region is specified as gene symbol
 
+## groups - character or factor vector of the same length as the vector of bam files, corresponding to the sample groups
+## If vector of groups is specified, additional lines are plotted for the average coverage between samples of each group.
+groups <- c("ctrl", "ctrl", "expt", "expt")
+
+## groups only - if "groups" is not null, a scalar prescribing whether only group average should be plotted, or whether it should be plotted alongside with individual coverages (default).
+
 ## Calculate and plot the coverage
 png("./graphs/use.case.1.png", 800, 600)
-plot.coverage.profile(target = target.range, bams = path.to.bams, lib.size = library.sizes, is.PE = is.PE, flank.region = flank.region, fragment.size = frag.size)
+plot.coverage.profile(target = target.range, bams = path.to.bams, lib.size = library.sizes, is.PE = is.PE, flank.region = flank.region, fragment.size = frag.size, groups = groups)
 dev.off()
 
 #### Use case 2 ####
@@ -61,9 +67,14 @@ is.PE = T
 ## genome - only required when target region is specified as gene symbol
 genome <- "mm10"
 
+## groups - character or factor vector of the same length as the vector of bam files, corresponding to the sample groups
+## If vector of groups is specified, additional lines are plotted for the average coverage between samples of each group.
+groups <- c("ctrl", "ctrl", "expt", "expt")
+
+
 ## Calculate and plot the coverage
 png("./graphs/use.case.2.png", 800, 600)
-plot.coverage.profile(target = target.gene, bams = path.to.bams, lib.size = library.sizes, is.PE = is.PE, genome = genome)
+plot.coverage.profile(target = target.gene, bams = path.to.bams, lib.size = library.sizes, is.PE = is.PE, genome = genome, groups = groups, groups.only = T)
 dev.off()
 
 #### Use case 3 ####
