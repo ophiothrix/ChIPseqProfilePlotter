@@ -54,7 +54,7 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     target.profile <- matrix(NA, length(bams), flank.dist*2+1)
     dim(target.profile)
     rownames(target.profile) <- bams
-    colnames(target.profile) <- -flank.dist:flank.dist
+    colnames(target.profile) <- (start(target.region)-flank.dist):(end(target.region)+flank.dist)
     
 
     ### Extract coverage for the region from each of the bam files
@@ -94,11 +94,8 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     }
 
     ## Initialise the plot
-    if(is.character(target)) {
-        plot(colnames(target.profile.norm), target.profile.norm[1,], type="n", main=target, ylab=y.label, xlab="Position centered on the gene", ylim=c(0, max(target.profile.norm)))
-    } else {
-        plot(colnames(target.profile.norm), target.profile.norm[1,], type="n", main=target, ylab="Normalised coverage", xlab="Position centered on target region", ylim=c(0, max(target.profile.norm)))
-    }
+    plot(colnames(target.profile.norm), target.profile.norm[1,], type="n", main=target, ylab="Normalised coverage", xlab=paste0("Position on ", seqnames(target.region)), ylim=c(0, max(target.profile.norm)))
+    
     
     ## Plot individual profiles
     ## if groups.only is set to T, do not plot individual profiles
@@ -109,7 +106,7 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     }
     
     
-    ## Plot group averages
+    ## Plot group averages, if groups vector is supplied
     if (!is.null(groups)) {
         for (grp in 1:nrow(group.avg)) {
             points(colnames(group.avg), group.avg[grp,], pch=16, cex=0.5, type="l", col=clrs[grp+length(bams)], lty = 3, lwd = 2)
@@ -119,7 +116,7 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     ### Plot legends and annotations
     ## For plotting genomic region
     if (class(target) == "GRanges") {
-        abline(v = c(-width(target)/2, width(target)/2), lty = 2, lwd  = 2)
+        abline(v = c(start(target), end(target)), lty = 2, lwd  = 2)
         if (groups.only) {
             legend("topright", legend = "Target region", col = "black", lwd = 2, lty = 2, bty = "n")
         } else {
@@ -130,11 +127,11 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     ## For plotting a gene
     if (is.character(target)) {
         if (unique(as.character(strand(target.regions))) == "+") {
-            tss.coord <- unique(start(target.regions) - start(target.region))
-            tes.coord <- unique(end(target.regions) - start(target.region))
+            tss.coord <- unique(start(target.regions))
+            tes.coord <- unique(end(target.regions))
         } else {
-            tes.coord <- unique(start(target.regions) - start(target.region))
-            tss.coord <- unique(end(target.regions) - start(target.region))
+            tes.coord <- unique(start(target.regions))
+            tss.coord <- unique(end(target.regions))
         }
         abline(v = tss.coord, lty = 2, lwd  = 2, col = "forestgreen")
         abline(v = tes.coord, lty = 2, lwd  = 2, col = "dodgerblue")
