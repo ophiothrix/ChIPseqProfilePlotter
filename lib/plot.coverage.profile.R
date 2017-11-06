@@ -1,7 +1,7 @@
 # rm(list=ls())
 
 
-plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size = 180, genome = NULL, expt.name="", flank.region = 5000L, is.PE = F) {
+plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size = 180, genome = NULL, flank.region = 5000L, is.PE = F) {
     require(GenomicRanges)
     require(csaw)
     require(edgeR)
@@ -9,11 +9,7 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     clrs <- brewer.pal(length(bams), "Dark2")
 
     print(paste0("Plotting coverage profile for ", target))
-    #   Make a folder to place the graphs in
-    if (expt.name != "") {
-        system(paste0("mkdir ./graphs/", expt.name))
-    }
-
+    
     ### Set target region for when target is specified as a gene symbol
     if (is.character(target)) {
         ## Getting target region from gene requires the genome to be specified
@@ -67,19 +63,25 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     ## If the library size not specified - plot the coverage directly
     if (is.null(lib.size)) {
         target.profile.norm <- target.profile
+        y.label <- "Raw coverage"
     } else {
         # If library size is specified, normalise the coverage by given library size
         target.profile.norm <- target.profile/lib.size*10^6
+        y.label <- "Normalised coverage, CPM"
     }
 
     ## Plot individual profiles
-    plot(colnames(target.profile.norm), target.profile.norm[1,], type="n", main=target, ylab="Normalised coverage", xlab="Position relative to TSS", ylim=c(0, max(target.profile.norm)))
+    if(is.character(target)) {
+        plot(colnames(target.profile.norm), target.profile.norm[1,], type="n", main=target, ylab=y.label, xlab="Position centered on the gene", ylim=c(0, max(target.profile.norm)))
+    } else {
+        plot(colnames(target.profile.norm), target.profile.norm[1,], type="n", main=target, ylab="Normalised coverage", xlab="Position centered on target region", ylim=c(0, max(target.profile.norm)))
+    }
     for (bam in 1:nrow(target.profile.norm)) {
         points(colnames(target.profile.norm), target.profile.norm[bam,], pch=16, cex=0.5, type="l", col=clrs[bam])
     }
     if (class(target) == "GRanges") {
         abline(v = c(-width(target)/2, width(target)/2), lty = 2, lwd  = 2)
-        legend("topright", legend = basename(bams), col = clrs, lwd = 2, bty = "n")
+        legend("topright", legend = c(basename(bams), "Target region"), col = c(clrs, "black"), lwd = 2, lty = c(rep(1, length(bams)), 2), bty = "n")
     }
     if (is.character(target)) {
         if (unique(as.character(strand(target.regions))) == "+") {
@@ -91,7 +93,7 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
         }
         abline(v = tss.coord, lty = 2, lwd  = 2, col = "forestgreen")
         abline(v = tes.coord, lty = 2, lwd  = 2, col = "dodgerblue")
-        legend("topright", legend = c(basename(bams), "TSSs", "TESs"), col = c(clrs, "forestgreen", "dodgerblue"), lwd = 2, bty = "n")
+        legend("topright", legend = c(basename(bams), "TSSs", "TESs"), col = c(clrs, "forestgreen", "dodgerblue"), lwd = 2, lty = c(rep(1, length(bams)), 2, 2), bty = "n")
     }
     
 

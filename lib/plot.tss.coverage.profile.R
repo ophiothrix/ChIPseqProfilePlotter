@@ -1,12 +1,16 @@
 ### Script to plot average coverage over multiple TSSs
 
-plot.tss.coverage.profile <- function(tss.annotation, bams, lib.size = NULL, fragment.size = 180, expt.name="", flank.region = 5000L, is.PE = F) {
+plot.tss.coverage.profile <- function(target.ranges, bams, lib.size = NULL, fragment.size = 180, flank.region = 5000L, is.PE = F) {
     require(GenomicRanges)
     require(csaw)
     require(edgeR)
     require(RColorBrewer)
     clrs <- brewer.pal(length(bams), "Dark2")
+    if (class(target.ranges) != "GRanges") {
+        stop("The function expects the target ranges to be of class GRanges.")
+    }
     
+    print("Plotting averaged coverage over specified regions")
     # Make a matrix to hold the coverage at each position
     target.profile <- matrix(NA, length(bams), flank.region*2+1)
     dim(target.profile)
@@ -23,7 +27,7 @@ plot.tss.coverage.profile <- function(tss.annotation, bams, lib.size = NULL, fra
     ## Count reads
     for (i in bams){
         print(paste0("Processing ", i))
-        target.profile[i,] <- profileSites(bam.files = i, regions = tss.annotation, range = flank.region, ext = fragment.size, param = dedup.on, average = T, normalize = "none")
+        target.profile[i,] <- profileSites(bam.files = i, regions = target.ranges, range = flank.region, ext = fragment.size, param = dedup.on, average = T, normalize = "none")
     }
     
     ## If the library size not specified - plot the coverage directly
