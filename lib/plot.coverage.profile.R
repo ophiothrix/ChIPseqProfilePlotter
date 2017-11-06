@@ -1,11 +1,3 @@
-# The idea is to take the gene coordinates 
-#   > set both start and end of the gene to the position in the middle of the gene
-#   > split the gene length in half and add 10kb - this is the range to supply to the profileSites function
-#   > This way, the profileSites will calculate the profile over the region that is half length of the gene + 10 kb either side of the centre of the gene. This should cover all the gene + 10 kb up and down-stream
-# The genes coordinates are based on the subread in-built RefSeq annotation and are gene-based, i.e. they span the length of the longest possible transcript for any given gene.
-
-## In its simplest form, the script takes as arguments the list of bam files and the gene symbol + genome or genomic region in a form of GRanges
-
 # rm(list=ls())
 
 
@@ -16,21 +8,40 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     require(RColorBrewer)
     clrs <- brewer.pal(length(bams), "Dark2")
 
-    print(target)
+    print(paste0("Plotting coverage profile for ", target))
     #   Make a folder to place the graphs in
     if (expt.name != "") {
         system(paste0("mkdir ./graphs/", expt.name))
     }
 
-    # Select the coordinates for the gene being plotted. If there's more than 1 transcript after reducing, use the first one.
-    # target.region <- anno[ anno$Symbols %in% target][1]
-    # target.region
-    if(class(target) == "GRanges") {
-        target.region <- target
+    ### Set target region for when target is specified as a gene symbol
+    if (is.character(target)) {
+        ## Getting target region from gene requires the genome to be specified
+        if (is.null(genome)) {
+            stop("In order to specify target region as a gene symbol, you need to specify genome, e.g. mm10, hg19, etc")
+        } else {
+            require(paste0("org.", toupper(substr(genome, 1, 1)), substr(genome, 2, 2), ".eg.db"), character.only = T)
+            symbs <- toTable(get(paste0("org.", toupper(substr(genome, 1, 1)), substr(genome, 2, 2), ".egSYMBOL")))
+            target.id <- symbs$gene_id[match(target, symbs$symbol)]
+            genome <- paste0("TxDb.Mmusculus.UCSC.", genome, ".knownGene")
+            require(genome, character.only = T)
+            anno <- transcriptsBy(x = get(genome), by = "gene")
+            target.regions <- anno[[target.id]]
+            ## In case there are multiple transcripts corresponding to a single gene, collapse them into a single range
+            target.region <- reduce(target.regions)
+        }
+    } else {
+        ### Set target region for when target is specified as a GRanges object
+        if(class(target) == "GRanges") {
+            target.region <- target
+        } else {
+            stop(paste0("You can specify the target region to be plotted either as an official gene symbol or the GRanges object. The target region specified doesn't seem to match either of those formats. Specified target region is of class '", class(target), "'"))
+        }
     }
+    
 
     # Set the flanking region by dividing gene length in half and adding flanking distance
-    flank.dist <- round(width(target)/2, 0)+flank.region
+    flank.dist <- round(width(target.region)/2, 0)+flank.region
     # Set target coordinates to the centre of the target region
     start(target.region) <- end(target.region) <- round((start(target.region) + end(target.region))/2, 0)
     # Make a matrix to hold the coverage at each position
@@ -38,8 +49,7 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     dim(target.profile)
     rownames(target.profile) <- bams
     colnames(target.profile) <- -flank.dist:flank.dist
-    target.profile[,1:10]
-
+    
 
     ### Extract coverage for the region from each of the bam files
     ## Set extraction parameters
@@ -48,30 +58,44 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     } else {
         dedup.on <- readParam(dedup=TRUE, minq=50, pe = "none")
     }
+    ## Count reads
     for (i in bams){
         print(paste0("Processing ", i))
-        target.profile[i,] <- profileSites(bam.files = i, regions = target, range = flank.dist, ext = fragment.size, param = dedup.on)
+        target.profile[i,] <- profileSites(bam.files = i, regions = target.region, range = flank.dist, ext = fragment.size, param = dedup.on)
     }
 
     ## If the library size not specified - plot the coverage directly
     if (is.null(lib.size)) {
         target.profile.norm <- target.profile
     } else {
-        # Normalise the coverage by given library size
+        # If library size is specified, normalise the coverage by given library size
         target.profile.norm <- target.profile/lib.size*10^6
     }
 
     ## Plot individual profiles
-    plot(colnames(target.profile.norm), target.profile.norm[1,], pch=16, cex=0.5, type="n", main=target, ylab="Normalised coverage", xlab="Position relative to TSS", ylim=c(0, max(target.profile.norm)))
-    for (i in 1:nrow(target.profile.norm)) {
-        points(colnames(target.profile.norm), target.profile.norm[i,], pch=16, cex=0.5, type="l", col=clrs[i])
+    plot(colnames(target.profile.norm), target.profile.norm[1,], type="n", main=target, ylab="Normalised coverage", xlab="Position relative to TSS", ylim=c(0, max(target.profile.norm)))
+    for (bam in 1:nrow(target.profile.norm)) {
+        points(colnames(target.profile.norm), target.profile.norm[bam,], pch=16, cex=0.5, type="l", col=clrs[bam])
     }
-    legend("topright", legend = basename(bams), col = clrs, lwd = 2, bty = "n")
     if (class(target) == "GRanges") {
         abline(v = c(-width(target)/2, width(target)/2), lty = 2, lwd  = 2)
+        legend("topright", legend = basename(bams), col = clrs, lwd = 2, bty = "n")
     }
+    if (is.character(target)) {
+        if (unique(as.character(strand(target.regions))) == "+") {
+            tss.coord <- unique(start(target.regions) - start(target.region))
+            tes.coord <- unique(end(target.regions) - start(target.region))
+        } else {
+            tes.coord <- unique(start(target.regions) - start(target.region))
+            tss.coord <- unique(end(target.regions) - start(target.region))
+        }
+        abline(v = tss.coord, lty = 2, lwd  = 2, col = "forestgreen")
+        abline(v = tes.coord, lty = 2, lwd  = 2, col = "dodgerblue")
+        legend("topright", legend = c(basename(bams), "TSSs", "TESs"), col = c(clrs, "forestgreen", "dodgerblue"), lwd = 2, bty = "n")
+    }
+    
 
-
+}
     # # Plot average profiles
     # #   h3 <- target.profile.norm[1, ]
     # t2 <- colMeans(target.profile.norm[2:4, ])
@@ -84,7 +108,6 @@ plot.coverage.profile <- function(target, bams, lib.size = NULL, fragment.size =
     # abline(v=c(0, (flank.dist-flank.region)*2), lty=2, lwd=2)
     # legend("topright", legend = c("H3 control", "WT H3K36me2", "d5KI H3K36me"), fill=c("forestgreen", "dodgerblue", "maroon"), bty="n")
     # dev.off()
-}
 # 
 # plot.gene.profile.wo.control <- function(target, bams, eff.lib.size, fragment.size, anno, expt.name="", flank.region = 15000L, bin.coords=NULL) {
 #     require(csaw)
