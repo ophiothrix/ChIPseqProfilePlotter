@@ -7,12 +7,12 @@ Refer to ./src/use.cases.R for typical usage.
 
 ### Use case 1 ###
 Plot coverage over specific genomic region
-![](graphs/use.case.1.pdf?raw=true)
+![Use Case 1](./graphs/use.case.1.pdf?raw=true "Use Case 1")
 
 ### Use case 2 ###
 Plot coverage over specific gene
-![](graphs/use.case.2.pdf?raw=true)
+![](./graphs/use.case.2.pdf?raw=true)
 
 ### Use case 3 ###
 Plot averaged coverage over all TSS on chromosome 19
-![](graphs/use.case.3.pdf?raw=true)
+![](./graphs/use.case.3.pdf?raw=true)
